@@ -1,173 +1,202 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kalkulator Newton-Cotes</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background-color: #111;
+      background-color: #000;
       color: #fff;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 30px;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-
+    .container {
+      max-width: 700px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #111;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #444;
+    }
     h1, h2 {
       text-align: center;
-      margin-bottom: 20px;
     }
-
-    .container {
-      max-width: 650px;
-      margin: auto;
-      background: #1c1c1c;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
-    }
-
     label {
       display: block;
       margin-top: 15px;
     }
-
     input, button {
       width: 100%;
       padding: 10px;
       margin-top: 5px;
-      background: #fff;
+      border-radius: 5px;
       border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      color: #000;
     }
-
     button {
-      background-color: #333;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s ease;
-      margin-top: 15px;
-    }
-
-    button:hover {
-      background-color: #555;
-    }
-
-    .result, .explanation {
-      background: #222;
-      padding: 15px;
+      background-color: #fff;
+      color: #000;
+      font-weight: bold;
       margin-top: 20px;
-      border-radius: 10px;
+      cursor: pointer;
     }
-
-    .result strong {
-      font-size: 18px;
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #222;
+      border-radius: 5px;
     }
-
-    code {
-      background: #333;
-      padding: 2px 6px;
-      border-radius: 4px;
+    canvas {
+      background: #fff;
+      margin-top: 20px;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-
-  <h1>Kalkulator Numerik</h1>
-  <h2>Metode Newton-Cotes: Trapesium & Simpson 1/3</h2>
-
   <div class="container">
-    <label>Fungsi f(x):</label>
-    <input type="text" id="fungsi" placeholder="Contoh: x^2 + 3*x + 2">
+    <h1>Kalkulator Newton-Cotes</h1>
+    <p>Metode Trapesium & Simpson 1/3</p>
 
-    <label>Batas bawah (a):</label>
-    <input type="number" id="a" value="0">
+    <label for="fungsi">Fungsi (contoh: x*x + 2):</label>
+    <input type="text" id="fungsi" placeholder="Masukkan fungsi" />
 
-    <label>Batas atas (b):</label>
-    <input type="number" id="b" value="1">
+    <label for="a">Batas bawah (a):</label>
+    <input type="number" id="a" />
 
-    <label>Jumlah segmen (n):</label>
-    <input type="number" id="n" value="4">
+    <label for="b">Batas atas (b):</label>
+    <input type="number" id="b" />
 
-    <button onclick="hitung()">Hitung Integral</button>
+    <label for="n">Jumlah segmen (n):</label>
+    <input type="number" id="n" value="2" />
 
-    <div class="result" id="hasil"></div>
+    <label for="toleransi">Toleransi galat (contoh: 0.001):</label>
+    <input type="number" step="any" id="toleransi" value="0.001" />
 
-    <div class="explanation">
-      <h3>Penjelasan Rumus:</h3>
-      <p><strong>1. Kaidah Trapesium</strong><br>
-      Digunakan untuk pendekatan integral dengan membagi daerah menjadi trapesium kecil.<br>
-      Rumus:
-      <br><code>∫f(x)dx ≈ (h/2) * [f(a) + 2∑f(xi) + f(b)]</code></p>
+    <button onclick="hitung()">Hitung</button>
 
-      <p><strong>2. Kaidah Simpson 1/3</strong><br>
-      Digunakan dengan pendekatan kurva parabola untuk hasil yang lebih akurat (n harus genap).<br>
-      Rumus:
-      <br><code>∫f(x)dx ≈ (h/3) * [f(a) + 4∑f(x ganjil) + 2∑f(x genap) + f(b)]</code></p>
+    <div class="result" id="output"></div>
 
-      <p><strong>Batas Toleransi:</strong> Selisih absolut antara hasil Trapesium dan Simpson, digunakan untuk mengetahui estimasi kesalahan.</p>
-    </div>
+    <canvas id="plot" width="600" height="300"></canvas>
+
+    <h2>Penjelasan Rumus</h2>
+    <p><b>Trapesium:</b><br>
+      \( \int_a^b f(x) dx \approx \frac{b-a}{2} [f(a) + f(b)] \)</p>
+    <p><b>Simpson 1/3:</b><br>
+      \( \int_a^b f(x) dx \approx \frac{b-a}{6} [f(a) + 4f(\frac{a+b}{2}) + f(b)] \)</p>
   </div>
 
   <script>
-    function f(expr, x) {
-      return math.evaluate(expr, { x: x });
+    function f(x, func) {
+      return Function("x", "return " + func)(x);
     }
 
-    function trapezoidalRule(expr, a, b, n) {
-      const h = (b - a) / n;
-      let sum = f(expr, a) + f(expr, b);
-      for (let i = 1; i < n; i++) {
-        const xi = a + i * h;
-        sum += 2 * f(expr, xi);
-      }
-      return (h / 2) * sum;
+    function trapezoid(func, a, b) {
+      return ((b - a) / 2) * (f(a, func) + f(b, func));
     }
 
-    function simpsonRule(expr, a, b, n) {
-      if (n % 2 !== 0) {
-        return "Jumlah segmen (n) harus genap untuk metode Simpson 1/3.";
-      }
-      const h = (b - a) / n;
-      let sum = f(expr, a) + f(expr, b);
-      for (let i = 1; i < n; i++) {
-        const xi = a + i * h;
-        sum += (i % 2 === 0 ? 2 : 4) * f(expr, xi);
-      }
-      return (h / 3) * sum;
+    function simpson(func, a, b) {
+      let m = (a + b) / 2;
+      return ((b - a) / 6) * (f(a, func) + 4 * f(m, func) + f(b, func));
     }
 
     function hitung() {
-      const expr = document.getElementById("fungsi").value;
+      const func = document.getElementById("fungsi").value;
       const a = parseFloat(document.getElementById("a").value);
       const b = parseFloat(document.getElementById("b").value);
       const n = parseInt(document.getElementById("n").value);
+      const tol = parseFloat(document.getElementById("toleransi").value);
+      let h = (b - a) / n;
 
-      try {
-        const hasilTrapesium = trapezoidalRule(expr, a, b, n);
-        const hasilSimpson = simpsonRule(expr, a, b, n);
+      let trapResult = 0;
+      let simpResult = 0;
+      let xData = [], yData = [];
 
-        let output = `
-          <strong>Hasil Integral:</strong><br>
-          Metode Trapesium: <code>${hasilTrapesium.toFixed(6)}</code><br>
-        `;
-
-        if (typeof hasilSimpson === "string") {
-          output += `<br><code>${hasilSimpson}</code>`;
-        } else {
-          const toleransi = Math.abs(hasilTrapesium - hasilSimpson);
-          output += `
-            Metode Simpson 1/3: <code>${hasilSimpson.toFixed(6)}</code><br>
-            Batas Toleransi (|Trapesium - Simpson|): <code>${toleransi.toExponential(6)}</code>
-          `;
-        }
-
-        document.getElementById("hasil").innerHTML = output;
-
-      } catch (e) {
-        document.getElementById("hasil").innerHTML = "<p>Terjadi kesalahan: " + e.message + "</p>";
+      for (let i = 0; i < n; i++) {
+        let x0 = a + i * h;
+        let x1 = x0 + h;
+        trapResult += trapezoid(func, x0, x1);
       }
+
+      if (n % 2 !== 0) {
+        document.getElementById("output").innerHTML =
+          "<p style='color:red'>Untuk Simpson 1/3, n harus genap.</p>";
+        return;
+      }
+
+      for (let i = 0; i < n; i += 2) {
+        let x0 = a + i * h;
+        let x2 = x0 + 2 * h;
+        simpResult += simpson(func, x0, x2);
+      }
+
+      const galat = Math.abs(trapResult - simpResult);
+      const hasil = galat <= tol ? simpResult : trapResult;
+
+      document.getElementById("output").innerHTML = `
+        <p><b>Hasil Trapesium:</b> ${trapResult.toFixed(6)}</p>
+        <p><b>Hasil Simpson 1/3:</b> ${simpResult.toFixed(6)}</p>
+        <p><b>Galat:</b> ${galat.toExponential(3)}</p>
+        <p><b>Hasil Akhir (berdasarkan toleransi):</b> ${hasil.toFixed(6)}</p>
+      `;
+
+      // Plot
+      xData = [], yData = [];
+      for (let x = a; x <= b; x += (b - a) / 100) {
+        xData.push(x);
+        yData.push(f(x, func));
+      }
+
+      const ctx = document.getElementById("plot").getContext("2d");
+      if (window.chart) window.chart.destroy();
+      window.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xData,
+          datasets: [{
+            label: 'f(x)',
+            data: yData,
+            borderColor: 'black',
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            fill: true,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'x',
+                color: '#fff'
+              },
+              ticks: {
+                color: '#fff'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'f(x)',
+                color: '#fff'
+              },
+              ticks: {
+                color: '#fff'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#fff'
+              }
+            }
+          }
+        }
+      });
     }
   </script>
 </body>
